@@ -1,0 +1,12 @@
+Metadata-Version: 2.4
+Name: og-deu
+Version: 0.1.0
+Summary: OG-Core calibration for Germany
+Requires-Python: >=3.10
+Requires-Dist: ogcore<0.15,>=0.14
+Requires-Dist: numpy
+Requires-Dist: pandas
+Requires-Dist: scipy
+Requires-Dist: pyyaml
+Requires-Dist: dask
+Requires-Dist: taxcalc

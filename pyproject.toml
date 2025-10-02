@@ -1,0 +1,20 @@
+[project]
+name = "og-deu"
+version = "0.1.0"
+description = "OG-Core calibration for Germany"
+requires-python = ">=3.10"
+
+
+dependencies = [
+  "ogcore>=0.14,<0.15",   
+  "numpy", "pandas", "scipy", "pyyaml",
+  "dask", "taxcalc", "statsmodels"
+]
+
+
+[tool.setuptools]
+packages = ["ogdeu"]   # baut das Paket ogdeu/
+
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
