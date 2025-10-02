@@ -1,0 +1,7 @@
+ogcore<0.15,>=0.14
+numpy
+pandas
+scipy
+pyyaml
+dask
+taxcalc
