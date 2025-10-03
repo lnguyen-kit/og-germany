@@ -5,10 +5,11 @@ from pathlib import Path
 import json
 import numpy as np
 from ogcore.parameters import Specifications
-from ogdeu import demography as demog  
+
 
 @dataclass
 class Calibration:
+    # Pfade & Settings
     overrides_file: Path = Path("policy/baseline_overrides.json")
     baseline: bool = True
     output_base: str = "OUTPUT_BASELINE"
@@ -23,13 +24,15 @@ class Calibration:
             print(f"[WARN] overrides file not found: {self.overrides_file.resolve()}")
         return specs
 
+
     # ohne e 
     def attach_demography(self, specs: Specifications, download_path: str | None = "data/demography"):
-        demog_S = demog.get_demog_S(specs, download_path=download_path, graph=False)
+        from .demographics import get_demog_S
+
+        demog_S = get_demog_S(specs, download_path=download_path, graph=False)
 
         # ParamTools-Format bauen: {"param": [{"value": ...}]}
         def pt_wrap(val):
-            import numpy as np
             arr = np.asarray(val)
             return [{"value": arr.tolist()}] if arr.ndim >= 1 else [{"value": float(arr)}]
 
