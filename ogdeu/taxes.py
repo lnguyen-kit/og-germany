@@ -7,6 +7,7 @@ import dask.multiprocessing
 import pkg_resources # um die taxcalc_version auszulesen 
 
 
+
 try:
     import taxcalc as tc  # nur CPS laden --> wir nutzen nur tc.Records.cps_constructor() zum Laden der CPS-Daten
 except Exception as e:
@@ -48,35 +49,26 @@ def get_calculator(
         #splitting=True → Einkommen halbieren, Tarif anwenden, verdoppeln (das ist das Splittingverfahren).
         # ---------------------------------------------------------------------
         # #Schaltet Ehegattensplitting ein/aus
-
-
-        # Kapital
-        cap_mode= "cap_flat",
-    
-        cap_rate=0.25,           # nur cap_fla 
+        splitting =True,
+        cap_rate=0.25,           #    # Kapital, cap flat 
         cap_allow=1000.0,           # z.B. 1000/2000 – minimal: 0
 
         # Numerik
         #er kleine Schritt für die Finite-Difference-Ableitungen (MTRx/MTRy).
         # MTRx ≈ (T(x+ε) − T(x)) / ε
         # MTRy ≈ (T(y+ε) − T(y)) / ε
-
         eps=1.0, 
-
         # Drifts, Drifts (Einkommenswachstum über Jahre)
         #Jährliche Wachstumsraten der CPS-Einkommen im Zeitverlauf 
         drift_w=0.02,
         drift_k=0.03,
-
         # Budgetfenster
         #Was es ist: Anzahl der Jahre, die du erzeugst
         T=1,
-
         # Skalierung
         # Was es ist: Ein Multiplikator auf alle Einkommen (Arbeit & Kapital), vor der Steuerberechnung
         # Einheiten anpassen (z. B. CPS in USD → Tarif in EUR ≈ 0.9–1.0 als grober Umrechnungsfaktor)
         scale_income=0.95,
-
         # --- ETR-Steuerung (NEU) ---
         # "pos": Nenner = nur positive Einkommen (lab^+ + cap^+)
         # "market": Nenner = lab + cap
@@ -95,7 +87,7 @@ def get_calculator(
 
 
 '''
-Helferfunktion für das Wuantile Mapping
+Helferfunktion für das Quantile Mapping
 '''
 
 def _quantile_map_wage(w, weight, ps, q_de, meanDE=None, positive_only=True):
@@ -142,50 +134,6 @@ def _wquantile(x, w, ps):
     return np.interp(ps, cdf, xs)
 
 
-'''
-
-def diagnose_wage_vs_targets(base, targets, *, atol=100.0, bbg1=66150.0, bbg2=96600.0):
-    import numpy as np, pandas as pd
-    w = base["wage"]; g = base["weight"]
-    sel = (w > 0)  # *** nur Beschäftigte! ***
-
-    ps  = np.asarray(targets["ps"], float)
-    q_t = np.asarray(targets["q_de"], float)
-    q_h = _wquantile(w[sel], g[sel], ps)
-
-    mean_t = targets.get("meanDE", None)
-    mean_h = np.average(w[sel], weights=g[sel])
-
-    df = pd.DataFrame({"p": (ps*100).astype(int), "target_q": q_t, "actual_q": q_h, "diff": q_h - q_t})
-    print("== Quantile-Check (nur wage>0) ==")
-    print(df.to_string(index=False))
-    if mean_t is not None:
-        print(f"\nMean>0: target={mean_t:,.0f}  actual={mean_h:,.0f}  diff={mean_h-mean_t:,.0f}")
-    else:
-        print(f"\nMean>0 (kein Ziel vorgegeben): actual={mean_h:,.0f}")
-
-    ok = np.all(np.abs(q_h - q_t) <= atol)
-    print(f"\nQuantile innerhalb ±{atol:.0f} €?  {'JA' if ok else 'NEIN'}")
-
-    share = lambda thr: (g[sel][w[sel] > thr].sum() / g[sel].sum())
-    print(f"\nAnteil (wage>0) > {bbg1:,.0f}: {share(bbg1):.3%}")
-    print(f"Anteil (wage>0) > {bbg2:,.0f}: {share(bbg2):.3%}")
-
-def diagnose_before_after(base, targets, *, sample=5):
-    if "wage_raw" not in base:
-        print("wage_raw nicht vorhanden.")
-        return
-    w0, w1, g = base["wage_raw"], base["wage"], base["weight"]
-    sel0 = (w0 > 0); sel1 = (w1 > 0)
-    ps = np.asarray(targets["ps"], float)
-
-    print("\n== Vorher/Nachher-Quantile (nur wage>0) ==")
-    q0 = _wquantile(w0[sel0], g[sel0], ps); q1 = _wquantile(w1[sel1], g[sel1], ps)
-    for p, a, b in zip((ps*100).astype(int), q0, q1):
-        print(f"P{p:02d}: raw={a:,.0f} → mapped={b:,.0f}")
-'''
-
-
 def scale_to_weighted_mean(x, w, target_mean):
     x = np.asarray(x, float); w = np.asarray(w, float)
     cur = np.average(x, weights=w)
@@ -202,11 +150,13 @@ def _load_cps(apply_qmap: bool=False, targets: dict | None=None,
     age   = np.asarray(getattr(recs, "age_head"), dtype=int)
     wage  = np.asarray(getattr(recs, "e00200"),   dtype=float)   # Lohn/Gehalt
     seinc = np.asarray(getattr(recs, "e00900"),   dtype=float)   # Selbständig
-    intr  = np.asarray(getattr(recs, "e00300"),   dtype=float)
-    div   = np.asarray(getattr(recs, "e00600"),   dtype=float)
-    cg    = np.asarray(getattr(recs, "p23250"),   dtype=float)
-    rent  = np.asarray(getattr(recs, "e18500"),   dtype=float)   # Vermietung/Verpachtung
+    farm = np.asarray(getattr(recs, "e02100"), float)
+
+    cg    = np.asarray(getattr(recs, "e01100"), float) #capital gain distribution
+    intr  = np.asarray(getattr(recs, "e00300"),   dtype=float)  #Zinsen 
+    div   = np.asarray(getattr(recs, "e00600"),   dtype=float)  # Dividenden
     wgt   = np.asarray(recs.s006,                 dtype=float)
+
     mars  = np.asarray(getattr(recs, "MARS"),     dtype=int)
     married = (mars == 2)
 
@@ -220,12 +170,12 @@ def _load_cps(apply_qmap: bool=False, targets: dict | None=None,
         wage_mapped = wage
     
     # --- Nur Mittelwerte treffen (gewichtete Destatis-Durchschnitte) ---
-    # Erwartet: component_targets = {"seinc": 45469.0, "rent": 7444.0, "cap": 6137.0}
+    # Erwartet: component_targets = {"seinc": 45469.0, "farm": 17002.0, "cap": 6137.0}
     if component_targets:
         if "seinc" in component_targets:
             seinc = scale_to_weighted_mean(seinc, wgt, component_targets["seinc"])
-        if "rent" in component_targets:
-            rent  = scale_to_weighted_mean(rent,  wgt, component_targets["rent"])
+        if "farm" in component_targets:
+            farm  = scale_to_weighted_mean(farm,  wgt, component_targets["farm"])
         # Kapital = Zinsen+Dividenden+real. Kursgewinne
         cap_raw = intr + div + cg
         if "cap" in component_targets:
@@ -237,18 +187,15 @@ def _load_cps(apply_qmap: bool=False, targets: dict | None=None,
 
     # --- Achsen sauber trennen ---
     payroll_base = wage_mapped              # SV-Bemessung NUR auf Lohn, also nur Sozailbeträge basieren auf Lohn/wage und nicht auf Gesamtarbeiseinkommen
-    lab          = wage_mapped + seinc + rent     # PIT-/Arbeits-Achse 
+    lab          = wage_mapped + seinc      # PIT-/Arbeits-Achse 
     cap          = cap_raw   # Kapital-Achse INKL. Miete
 
     return dict(
         age=age, weight=wgt, married=married,
         wage=wage_mapped, wage_raw=wage, seinc=seinc,
-        intr=intr, div=div, cg=cg, rent=rent,
+        intr=intr, div=div, cg=cg, farm=farm,
         payroll_base=payroll_base, lab=lab, cap=cap
     )
-
-
-
 
 # ---------- §32a Grundtarif 2025 ----------
 def est_grundtarif_2025(zve, splitting=False, rounded =True):
@@ -262,7 +209,7 @@ def est_grundtarif_2025(zve, splitting=False, rounded =True):
     x = np.floor(arr) if rounded else arr
    
 
-    # für jedes EInkommmen x_ erhält man den jeweiligen Tarifbetrag gemäß § 32a für 2024
+    # für jedes EInkommmen x_ erhält man den jeweiligen Tarifbetrag gemäß § 32a für 2025
     def grundtarif(x_):
         # §32a EStG 2025 – Parameter
         # y: Zehntausendstel des über 12.096 € liegenden Teils
@@ -301,6 +248,7 @@ def est_grundtarif_2025(zve, splitting=False, rounded =True):
         return 2.0 * grundtarif(np.floor(x / 2.0) if rounded else (x / 2.0))
     else:
         return grundtarif(x)
+    
 
 
 
@@ -310,7 +258,7 @@ def est_grundtarif_2025(zve, splitting=False, rounded =True):
 #  - KV/PV bis BBG_KV_PV
 #  - RV/ALV bis BBG_RV_ALV
 # Sie liefert (Beitrag, MTR-Komponente) zurück.
-def payroll_de_2025_DE_avg(
+def payroll_de_2025(
     lab_income,
     *,
     # Beitragsbemessungsgrenzen (Jahreswerte 2025)
@@ -358,7 +306,7 @@ def payroll_de_2025_DE_avg(
 
 
 # ---------- Steuerrechnung ----------
-def _apply_de_tax(lab, cap, P, split_mask=None, payroll_base=None):
+def apply_de_tax(lab, cap, P, split_mask=None, payroll_base=None):
     eps = float(P.get("eps", 1.0))
     split = np.zeros_like(lab, dtype=bool) if split_mask is None else np.asarray(split_mask, dtype=bool)
 
@@ -378,7 +326,7 @@ def _apply_de_tax(lab, cap, P, split_mask=None, payroll_base=None):
         return pit
 
     def payroll_from_wage(w_vec):
-        contrib, mtr = payroll_de_2025_DE_avg(
+        contrib, mtr = payroll_de_2025(
             w_vec,
             BBG_KV_PV=float(P.get("BBG_KV_PV", 66_150.0)),
             BBG_RV_ALV=float(P.get("BBG_RV_ALV", 96_600.0)),
@@ -414,8 +362,6 @@ def _apply_de_tax(lab, cap, P, split_mask=None, payroll_base=None):
     return T, payroll, etr, mtrx, mtry
 
 
-
-
 def cps_de_advance(policy: dict, year: int, base):
     start_year = int(policy["start_year"])
     t = year - start_year #start_year wurde in get_calculator(...) gesetzt (z. B. 2022). t ist, wie viele Jahre du vorangeschritten bist.
@@ -426,7 +372,7 @@ def cps_de_advance(policy: dict, year: int, base):
     lab = base["lab"] * ((1.0 + float(policy.get("drift_w", 0.02))) ** t) * float(policy.get("scale_income", 1.0)) # Arbeitseinkommen wächst jährlich mit drift_w (Standard 2 %), also (1,02)^t 
     cap = base["cap"] * ((1.0 + float(policy.get("drift_k", 0.03))) ** t) * float(policy.get("scale_income", 1.0)) # Kapitaleinkommen wächst um 3 prozent , scale_income skaliert beide zusätzlich (z. B. USD→EUR-Umrechnung oder Level-Kalibrierung)
 
-    T, payroll, etr, mtrx, mtry = _apply_de_tax(lab, cap, policy, split_mask=base["married"], payroll_base=base.get("payroll_base", None)) # _apply_de_tax(lab, cap, policy ist mein Steur Engine , also rechnet trafilce Est auf einer passendne Besmmsungsgrundlage und leifert T, pyroll, et und mtrx und mtry
+    T, payroll, etr, mtrx, mtry = apply_de_tax(lab, cap, policy, split_mask=base["married"], payroll_base=base.get("payroll_base", None)) # apply_de_tax(lab, cap, policy ist mein Steur Engine , also rechnet trafilce Est auf einer passendne Besmmsungsgrundlage und leifert T, pyroll, et und mtrx und mtry
 
     N = lab.shape[0] # N ist die Länge der Arrays – wichtig, um unten Vektoren der richtigen Länge zu bauen (z. B. die year-Spalte).
     
@@ -461,7 +407,7 @@ def get_data(
     DE_TARGETS = {
     "ps":   np.array([0.10,0.20,0.30,0.40,0.50,0.60,0.70,0.80,0.90,0.99], dtype=float),
     "q_de": np.array([32526,37944,42700,47244,52159,58214,65843,77105,97680,213286], dtype=float),
-    #"meanDE": 62235.0,  # optional
+    #"meanDE": 62235.0,  # optional, nicht relevant 
 }
     # Sicherheitschecks:
     assert len(DE_TARGETS["ps"]) == len(DE_TARGETS["q_de"])
@@ -474,7 +420,7 @@ def get_data(
 
     DE_COMP_TARGETS = {
         "seinc": 45469.0,  # selbständige Arbeit
-        "rent":   7444.0,  # Vermietung/Verpachtung
+        "farm":   17002.0,  # Landwirtschaft
         "cap":    6137.0,  # Kapitalvermögen (Zins+Div+CG)
     }
 
@@ -519,7 +465,4 @@ def get_data(
     taxcalc_version = pkg_resources.get_distribution("taxcalc").version
 
     return micro_data_dict, f"CPS-DE-v1 (tc {taxcalc_version})"
-
-
-
 
