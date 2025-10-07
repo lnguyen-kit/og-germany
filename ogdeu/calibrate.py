@@ -6,7 +6,7 @@ import json
 import numpy as np
 from ogcore.parameters import Specifications
 
-
+# Self = Instanz (das konkrete Objekt) der Klass
 @dataclass
 class Calibration:
     # Pfade & Settings

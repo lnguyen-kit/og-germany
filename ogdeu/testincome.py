@@ -3,7 +3,7 @@ import pandas as pd
 import scipy.optimize as opt
 import scipy.interpolate as si
 from ogcore import parameter_plots as pp
-from linearmodels.panel import PanelOLS
+#from linearmodels.panel import PanelOLS
 from ogcore.parameters import Specifications
 from ogcore import utils
 
@@ -450,8 +450,14 @@ def get_e_US(age_wgts, abil_wgts, plot_path=None):
 
 
     # hier bitte noch prüfen 
+    # abil_deprec sind werte die steuern, wie stark die tail extrapolation für Alter 81 bis 100 fällt
+    # Für Deutschland ist ein Rückgang um etwa die Hälfte in 20 Jahren gut begründbar und konsistent 
+    # mit NTA/AGENTA-Profilen (Arbeits­einkommen konzentriert sich auf 20–60 und fällt im hohen Alter stark)
+
     abil_deprec = np.array([0.47, 0.5, 0.5, 0.5, 0.5, 0.7, 0.5])
     #     Initial guesses for the arctan. They're pretty sensitive.
+    # Startwerte für a, b und c der actan Kurve mit der man den Teil von Es für Alter 81 bis 100 glättet
+    # solver ermittelt die endgültigen Paramter die alle drei Randbenigungen erfüllen 
     init_guesses = np.array(
         [
             [58, 0.0756438545595, -5.6940142786],
@@ -464,8 +470,8 @@ def get_e_US(age_wgts, abil_wgts, plot_path=None):
         ]
     )
     for j in range(7):
-        e_orig[60:, j] = arctan_fit(
-            e_orig[59, j],
+        e_orig_alt[60:, j] = arctan_fit(
+            e_orig_alt[59, j],
             one[j],
             two[j],
             three[j],

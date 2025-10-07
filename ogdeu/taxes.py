@@ -2,7 +2,6 @@
 import os, pickle
 import numpy as np
 import pandas as pd
-
 from dask import delayed, compute
 import dask.multiprocessing
 import pkg_resources # um die taxcalc_version auszulesen 
@@ -11,7 +10,7 @@ import pkg_resources # um die taxcalc_version auszulesen
 try:
     import taxcalc as tc  # nur CPS laden --> wir nutzen nur tc.Records.cps_constructor() zum Laden der CPS-Daten
 except Exception as e:
-    raise RuntimeError("Bitte 'pip install taxcalc' ausführen. Grund: " + str(e))
+    raise RuntimeError("Bitte  taxcalc installieren. Grund: " + str(e))
 
 try:
     from ogcore import utils  # mkdirs wie OG-IND
@@ -21,7 +20,7 @@ except Exception:
         def mkdirs(p): os.makedirs(p, exist_ok=True)
     utils = _U()
 
-DEFAULT_START_YEAR = 2024 #brauche ich das wirklich ? 
+DEFAULT_START_YEAR = 2025 #brauche ich das wirklich ? 
 CUR_PATH = os.getcwd()
 
 
@@ -48,11 +47,10 @@ def get_calculator(
         #splitting=False → normaler Grundtarif (§32a EStG) auf das zu versteuernde Einkommen (bei dir: pit_base).
         #splitting=True → Einkommen halbieren, Tarif anwenden, verdoppeln (das ist das Splittingverfahren).
         # ---------------------------------------------------------------------
-        #
-        splitting=False, #Schaltet Ehegattensplitting ein/aus
+        # #Schaltet Ehegattensplitting ein/aus
 
 
-        # Kapital – zwei Modi
+        # Kapital
         cap_mode= "cap_flat",
     
         cap_rate=0.25,           # nur cap_fla 
@@ -101,7 +99,6 @@ Helferfunktion für das Wuantile Mapping
 '''
 
 def _quantile_map_wage(w, weight, ps, q_de, meanDE=None, positive_only=True):
-    import numpy as np
     w = np.asarray(w, float).copy(); g = np.asarray(weight, float) # sicherstellen dass w und weight float array sind, Copierne vom Orginal 
     sel = (w > 0) if positive_only else np.isfinite(w) # nur Beschäftigte Mappen deren Lohn größer 0 ist , wenn positive_only =True
     if sel.sum() == 0: return w # falls es keinen Fall zum Mappen gibt, dann das Origianl zurückgeben
@@ -139,11 +136,13 @@ def _quantile_map_wage(w, weight, ps, q_de, meanDE=None, positive_only=True):
 
 
 def _wquantile(x, w, ps):
-    import numpy as np
     x = np.asarray(x, float); w = np.asarray(w, float); ps = np.asarray(ps, float)
     s = np.argsort(x); xs, ws = x[s], w[s]
     cdf = np.cumsum(ws) / ws.sum()
     return np.interp(ps, cdf, xs)
+
+
+'''
 
 def diagnose_wage_vs_targets(base, targets, *, atol=100.0, bbg1=66150.0, bbg2=96600.0):
     import numpy as np, pandas as pd
@@ -173,7 +172,6 @@ def diagnose_wage_vs_targets(base, targets, *, atol=100.0, bbg1=66150.0, bbg2=96
     print(f"Anteil (wage>0) > {bbg2:,.0f}: {share(bbg2):.3%}")
 
 def diagnose_before_after(base, targets, *, sample=5):
-    import numpy as np
     if "wage_raw" not in base:
         print("wage_raw nicht vorhanden.")
         return
@@ -185,12 +183,21 @@ def diagnose_before_after(base, targets, *, sample=5):
     q0 = _wquantile(w0[sel0], g[sel0], ps); q1 = _wquantile(w1[sel1], g[sel1], ps)
     for p, a, b in zip((ps*100).astype(int), q0, q1):
         print(f"P{p:02d}: raw={a:,.0f} → mapped={b:,.0f}")
+'''
 
+
+def scale_to_weighted_mean(x, w, target_mean):
+    x = np.asarray(x, float); w = np.asarray(w, float)
+    cur = np.average(x, weights=w)
+    if cur == 0:
+        return x  # oder: raise ValueError("aktuelles Mittel = 0")
+    return x * (float(target_mean) / cur)
 
 
 # ---------- CPS laden ----------
 
-def _load_cps(apply_qmap: bool=False, targets: dict | None=None):
+def _load_cps(apply_qmap: bool=False, targets: dict | None=None,
+              component_targets: dict|None=None):
     recs = tc.Records.cps_constructor()
     age   = np.asarray(getattr(recs, "age_head"), dtype=int)
     wage  = np.asarray(getattr(recs, "e00200"),   dtype=float)   # Lohn/Gehalt
@@ -211,11 +218,27 @@ def _load_cps(apply_qmap: bool=False, targets: dict | None=None):
         )
     else:
         wage_mapped = wage
+    
+    # --- Nur Mittelwerte treffen (gewichtete Destatis-Durchschnitte) ---
+    # Erwartet: component_targets = {"seinc": 45469.0, "rent": 7444.0, "cap": 6137.0}
+    if component_targets:
+        if "seinc" in component_targets:
+            seinc = scale_to_weighted_mean(seinc, wgt, component_targets["seinc"])
+        if "rent" in component_targets:
+            rent  = scale_to_weighted_mean(rent,  wgt, component_targets["rent"])
+        # Kapital = Zinsen+Dividenden+real. Kursgewinne
+        cap_raw = intr + div + cg
+        if "cap" in component_targets:
+            cap_raw = scale_to_weighted_mean(cap_raw, wgt, component_targets["cap"])
+    else:
+        cap_raw = intr + div + cg
+
+    
 
     # --- Achsen sauber trennen ---
     payroll_base = wage_mapped              # SV-Bemessung NUR auf Lohn, also nur Sozailbeträge basieren auf Lohn/wage und nicht auf Gesamtarbeiseinkommen
-    lab          = wage_mapped + seinc + rent     # PIT-/Arbeits-Achse (ohne Miete!)
-    cap          = intr + div + cg   # Kapital-Achse INKL. Miete
+    lab          = wage_mapped + seinc + rent     # PIT-/Arbeits-Achse 
+    cap          = cap_raw   # Kapital-Achse INKL. Miete
 
     return dict(
         age=age, weight=wgt, married=married,
@@ -351,7 +374,7 @@ def _apply_de_tax(lab, cap, P, split_mask=None, payroll_base=None):
     def pit_from_base(base, rounded):
         pit = np.empty_like(base, dtype=float)
         pit[split]  = 2.0 * est_grundtarif_2025(0.5 * base[split], rounded=rounded)
-        pit[~split] =       est_grundtarif_2025(      base[~split], rounded=rounded)
+        pit[~split] = est_grundtarif_2025(      base[~split], rounded=rounded)
         return pit
 
     def payroll_from_wage(w_vec):
@@ -434,7 +457,7 @@ def get_data(
     )
 
 
-    # Beispiel-Ziele (fülle deine Destatis-Zahlen ein!)
+    # Destatis-Zahlen  als Zielwerte
     DE_TARGETS = {
     "ps":   np.array([0.10,0.20,0.30,0.40,0.50,0.60,0.70,0.80,0.90,0.99], dtype=float),
     "q_de": np.array([32526,37944,42700,47244,52159,58214,65843,77105,97680,213286], dtype=float),
@@ -449,14 +472,19 @@ def get_data(
     # sonst würdest du den frisch getroffenen Mean wieder verschieben.
     policy["scale_income"] = 1.0
 
-    base = _load_cps(apply_qmap=True, targets=DE_TARGETS)
+    DE_COMP_TARGETS = {
+        "seinc": 45469.0,  # selbständige Arbeit
+        "rent":   7444.0,  # Vermietung/Verpachtung
+        "cap":    6137.0,  # Kapitalvermögen (Zins+Div+CG)
+    }
+
+    base = _load_cps(apply_qmap=True, targets=DE_TARGETS,
+                     component_targets=DE_COMP_TARGETS)
 
 
-    diagnose_wage_vs_targets(base, DE_TARGETS, atol=100.0)     # trifft P10..P99? Mean?
-    diagnose_before_after(base, DE_TARGETS)                   # optional: Vorher/Nachher
+ #   diagnose_wage_vs_targets(base, DE_TARGETS, atol=100.0)     # trifft P10..P99? Mean?
+  #  diagnose_before_after(base, DE_TARGETS)                   # optional: Vorher/Nachher
 
-
-    
 
     # 3) Fenster & Obergrenze wie OG-IND
     T = int(policy.get("T", 1))
@@ -493,21 +521,5 @@ def get_data(
     return micro_data_dict, f"CPS-DE-v1 (tc {taxcalc_version})"
 
 
-# --- Mini-Validator ---
-REQ = ["mtr_labinc","mtr_capinc","age","total_labinc","total_capinc",
-       "market_income","total_tax_liab","payroll_tax_liab","etr","year","weight"]
-
-def validate(micro):
-    assert isinstance(micro, dict) and micro
-    for y, df in micro.items():
-        miss = [c for c in REQ if c not in df.columns]
-        assert not miss, f"{y}: fehlende Spalten {miss}"
-        assert np.isfinite(df[REQ]).all().all(), f"{y}: NaNs/Inf vorhanden"
-        assert (df["etr"] >= -0.5).all() and (df["etr"] <= 2.0).all(), f"{y}: ETR-Ausreißer"
-    return "OK"
-
-if __name__ == "__main__":
-    micro, _ = get_data(baseline=True, start_year=2024, reform={"T":1, "cap_mode":"cap_flat"})
-    print(validate(micro))
 
 
