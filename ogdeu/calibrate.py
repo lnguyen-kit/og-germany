@@ -2,7 +2,7 @@
 from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
-from ogdeu import get_micro_data, income, macro_params
+from ogdeu import get_micro_data, macro_params, testincome1
 from ogcore import txfunc, demographics
 from ogcore.utils import safe_read_pickle, mkdirs
 import json

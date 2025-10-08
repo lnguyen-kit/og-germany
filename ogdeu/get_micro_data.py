@@ -7,7 +7,6 @@ import dask.multiprocessing
 import pkg_resources # um die taxcalc_version auszulesen 
 
 
-
 try:
     import taxcalc as tc  # nur CPS laden --> wir nutzen nur tc.Records.cps_constructor() zum Laden der CPS-Daten
 except Exception as e:
