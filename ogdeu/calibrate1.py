@@ -2,7 +2,7 @@
 from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
-from ogdeu import get_micro_data, macro_params, testincome1
+from ogdeu import get_micro_data, macro_params
 from ogcore import txfunc, demographics
 from ogcore.utils import safe_read_pickle, mkdirs
 import json
@@ -14,72 +14,71 @@ from ogcore.parameters import Specifications
 # Self = Instanz (das konkrete Objekt) der Klass
 @dataclass
 class Calibration:
-    # Pfade & Settings
-    overrides_file: Path = Path("policy/baseline_overrides.json")
-    baseline: bool = True
-    output_base: str = "OUTPUT_BASELINE"
-
-    def build_specs(self) -> Specifications:
-        specs = Specifications(baseline=self.baseline, output_base=self.output_base)
-        if self.overrides_file.exists():
-            with self.overrides_file.open("r", encoding="utf-8") as f:
-                overrides = json.load(f)
-            specs.update_specifications(overrides)
-        else:
-            print(f"[WARN] overrides file not found: {self.overrides_file.resolve()}")
-        return specs
-
-
-    # ohne e 
-    def attach_demography(self, specs: Specifications, download_path: str | None = "data/demography"):
-        from .demographics import get_demog_S
-
-        demog_S = get_demog_S(specs, download_path=download_path, graph=False)
-
-        # ParamTools-Format bauen: {"param": [{"value": ...}]}
-        def pt_wrap(val):
-            arr = np.asarray(val)
-            return [{"value": arr.tolist()}] if arr.ndim >= 1 else [{"value": float(arr)}]
-
-        demog_overrides = {k: pt_wrap(v) for k, v in demog_S.items()}
-        specs.update_specifications(demog_overrides)
-
-        # optional für spätere Nutzung:
-        self.demographic_params = demog_S
-        return demog_S
     
-    def __init__ (
-        
-            demog80 = demographics.get_pop_objs(
-                20,
-                80
-                p.T,
-                0,
-                99,
-                country_id="276",
-                initial_data_year=p.start_year - 1,
-                final_data_year=p.start_year + 1,
-                GraphDiag=False,                
+
+    def __init__(
+            self,
+            p,
+            estimate_tax_functions=False,
+            tax_func_path=None,
+            pit_reform={},
+            guid="",
+            data=None,
+            client=None,
+            num_workers=1,
+    ):
+        self.estimate_tax_functions = estimate_tax_functions
+
+        if estimate_tax_functions:
+            if tax_func_path is not None:
+                run_micro = False
+            else:
+                run_micro = True
+            self.tax_function_params = self.get_tax_function_parameters(
+                p,
+                pit_reform,
+                guid,
+                data,
+                client,
+                num_workers,
+                run_micro=run_micro,
+                tax_func_path=tax_func_path,
             )
-            
 
+        # Macro estimation
+        self.macro_params = macro_params.get_macro_params()
 
-            ealt = income.get_e_US(
+        # demographics
+        self.demographic_params = demographics.get_pop_objs(
+            p.E,p.S,p.T,0,99,
+            country_id="276",
+            initial_data_year=p.start_year - 1,
+            final_data_year=p.start_year,
+            GraphDiag=False,
+            download_path=demographic_data_path,
+        )
+
+        # demographics for 80 period lives (needed for getting e below)
+        demog80 = demographics.get_pop_objs(
+            20,80,p.T,0,99,
+            country_id="276",
+            initial_data_year=p.start_year - 1,
+            final_data_year=p.start_year + 1,
+            GraphDiag=False,
+        )
+
+        ealt = income.get_e_US(
                 demog80["omega_SS"],
                 p.lambdas,    
             )
-
-
-            self.e = income.match_gini(
+    # earning profile die altersskaliert und giniskalsiert ist
+        self.e = income.match_gini(
                 ealt,
                 p.lambdas,
                 demog80["omega_SS"],
                 0.311,
                 plot=False,
-            )
-    )
-    
-
+        )
 
 
     def get_tax_function_parameters(

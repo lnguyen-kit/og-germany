@@ -172,7 +172,7 @@ def arctan_fit(first_point, coef1, coef2, coef3, abil_deprec, init_guesses):
 
 
 
-def get_e_US(age_wgts, abil_wgts, plot_path=None):
+def get_e_US(age_wgts, abil_wgts):
 
     """
     Überblick 
