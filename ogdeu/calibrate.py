@@ -48,7 +48,7 @@ class Calibration:
         self.demographic_params = demog_S
         return demog_S
     
-    def __init__ (
+    def __init__(
         
             demog80 = demographics.get_pop_objs(
                 20,
@@ -77,7 +77,7 @@ class Calibration:
                 0.311,
                 plot=False,
             )
-    )
+        )
     
 
 

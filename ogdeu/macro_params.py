@@ -63,27 +63,27 @@ def estimate_rgov_params(df):
 # get_macro_params() baut ein Dictionary mit Makro-Parametern auf
 # Dictionary das in p.update_specifications(...) mergt wrid 
 def get_macro_params():
-    macro_paramters = {
-    "gamma" : [{"value": [0.36]}],
-    "epsilon" : [{"value": [1.0]}],
-    "g_y_annual": [{"value": 0.01}],
-    "initial_debt_ratio" : [{"value": 0.638}],
-    "beta_annual" :[{"value": [0.98,0.98,0.98,0.98,0.98,0.98,0.98]}],
-    "frisch" : [{"value": 0.29}],
-    "initial_foreign_debt_ratio" : [{"value": 0.48}],
-    "sigma" : [{"value": 1.298701}],
-    "zeta_D": [{"value": [0.4]}],
-    "zeta_K": [{"value": [0.0]}],
-    "alpha_G": [{"value": [0.066]}],
-    "alpha_T": [{"value": [0.161]}],
-    "tau_c" : [{"value": [[0.19]]}],
-    "retirement_age": [{"value": [67]}],
-    "cit_rate": [{"value": [[0.15825]]}], 
-    "delta_annual" : [{"value": 0.04}],
-    "r_gov_scale" : [{"value": [0.944888]}],
-    "r_gov_shift" : [{"value": [0.014632]}]
+    return {
+        "gamma" : [0.36],
+        "epsilon" : [1.0],
+        "g_y_annual":  0.01,
+        "initial_debt_ratio" : 0.638,
+        "beta_annual" : [0.98,0.98,0.98,0.98,0.98,0.98,0.98],
+        "frisch" :  0.29,
+        "initial_foreign_debt_ratio" : 0.48,
+        "sigma" : 1.298701,
+        "zeta_D": [0.4],
+        "zeta_K":  [0.0],
+        "alpha_G":  [0.066],
+        "alpha_T":  [0.161],
+        "tau_c" :  [[0.19]],
+        "retirement_age": [67],
+        "cit_rate": [[0.15825]], 
+        "delta_annual" :  0.04,
+        "r_gov_scale" :[0.944888],
+        "r_gov_shift" :[0.014632],
     }
-    return macro_paramters
+    
 
 
 
