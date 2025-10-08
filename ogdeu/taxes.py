@@ -84,8 +84,6 @@ def get_calculator(
     policy["start_year"] = int(calculator_start_year)
     return policy # vorher calc1: gibt ein Calculator-Objekt zurück, das für das gewünschte Startjahr konfiguriert ist
 
-
-
 '''
 Helferfunktion für das Quantile Mapping
 '''
@@ -133,13 +131,13 @@ def _wquantile(x, w, ps):
     cdf = np.cumsum(ws) / ws.sum()
     return np.interp(ps, cdf, xs)
 
-
+# skaliert jede einzele Beobachtung(Haushalt/Person) mit demselben Faktor, so dass gewichtete Mittelwert auf den Ziielwert trifft 
 def scale_to_weighted_mean(x, w, target_mean):
     x = np.asarray(x, float); w = np.asarray(w, float)
-    cur = np.average(x, weights=w)
+    cur = np.average(x, weights=w) # gewicheteter MIttelwert 
     if cur == 0:
-        return x  # oder: raise ValueError("aktuelles Mittel = 0")
-    return x * (float(target_mean) / cur)
+        return x  # oder: raise ValueError("aktuelles Mittel = 0") , Divisison durch null vermeiden 
+    return x * (float(target_mean) / cur) #Sklierungsfaktor 
 
 
 # ---------- CPS laden ----------
@@ -155,7 +153,7 @@ def _load_cps(apply_qmap: bool=False, targets: dict | None=None,
     cg    = np.asarray(getattr(recs, "e01100"), float) #capital gain distribution
     intr  = np.asarray(getattr(recs, "e00300"),   dtype=float)  #Zinsen 
     div   = np.asarray(getattr(recs, "e00600"),   dtype=float)  # Dividenden
-    wgt   = np.asarray(recs.s006,                 dtype=float)
+    wgt   = np.asarray(recs.s006,                 dtype=float) # Gewichte 
 
     mars  = np.asarray(getattr(recs, "MARS"),     dtype=int)
     married = (mars == 2)
@@ -418,6 +416,7 @@ def get_data(
     # sonst würdest du den frisch getroffenen Mean wieder verschieben.
     policy["scale_income"] = 1.0
 
+    # Werte von Destatis (2024)
     DE_COMP_TARGETS = {
         "seinc": 45469.0,  # selbständige Arbeit
         "farm":   17002.0,  # Landwirtschaft
