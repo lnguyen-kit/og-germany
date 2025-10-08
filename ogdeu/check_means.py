@@ -1,6 +1,6 @@
 # check_means.py
 import numpy as np
-from taxes import _load_cps
+from ogdeu.get_micro_data import _load_cps
 
 DE_TARGETS = {
     "ps":   np.array([0.10,0.20,0.30,0.40,0.50,0.60,0.70,0.80,0.90,0.99], dtype=float),

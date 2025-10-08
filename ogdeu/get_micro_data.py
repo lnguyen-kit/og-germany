@@ -124,12 +124,16 @@ def _quantile_map_wage(w, weight, ps, q_de, meanDE=None, positive_only=True):
     return out
 
 
-
+'''
+Zur Validierung 
 def _wquantile(x, w, ps):
     x = np.asarray(x, float); w = np.asarray(w, float); ps = np.asarray(ps, float)
     s = np.argsort(x); xs, ws = x[s], w[s]
     cdf = np.cumsum(ws) / ws.sum()
     return np.interp(ps, cdf, xs)
+
+'''
+
 
 # skaliert jede einzele Beobachtung(Haushalt/Person) mit demselben Faktor, so dass gewichtete Mittelwert auf den Ziielwert trifft 
 def scale_to_weighted_mean(x, w, target_mean):
@@ -169,6 +173,7 @@ def _load_cps(apply_qmap: bool=False, targets: dict | None=None,
     
     # --- Nur Mittelwerte treffen (gewichtete Destatis-Durchschnitte) ---
     # Erwartet: component_targets = {"seinc": 45469.0, "farm": 17002.0, "cap": 6137.0}
+    cap_raw = intr + div + cg
     if component_targets:
         if "seinc" in component_targets:
             seinc = scale_to_weighted_mean(seinc, wgt, component_targets["seinc"])
@@ -184,8 +189,8 @@ def _load_cps(apply_qmap: bool=False, targets: dict | None=None,
     
 
     # --- Achsen sauber trennen ---
-    payroll_base = wage_mapped              # SV-Bemessung NUR auf Lohn, also nur Sozailbeträge basieren auf Lohn/wage und nicht auf Gesamtarbeiseinkommen
-    lab          = wage_mapped + seinc      # PIT-/Arbeits-Achse 
+    payroll_base = wage_mapped # SV-Bemessung NUR auf Lohn, also nur Sozailbeträge basieren auf Lohn/wage und nicht auf Gesamtarbeiseinkommen
+    lab          = wage_mapped + seinc + farm  # PIT-/Arbeits-Achse 
     cap          = cap_raw   # Kapital-Achse INKL. Miete
 
     return dict(
@@ -456,10 +461,6 @@ def get_data(
 
     micro_data_dict = {str(yr): pd.DataFrame(res) for yr, res in zip(years, results)}
 
-    # Pickel Seichern, ordner anlegen , dateinnamen --> JAhresdic aus Dataframes
-    utils.mkdirs(path)
-    pkl_path = os.path.join(path, "micro_data_baseline.pkl" if baseline else "micro_data_policy.pkl")
-    with open(pkl_path, "wb") as f: pickle.dump(micro_data_dict, f)
 
     taxcalc_version = pkg_resources.get_distribution("taxcalc").version
 
