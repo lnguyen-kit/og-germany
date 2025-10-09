@@ -301,6 +301,8 @@ class Calibration:
     
     
      # method to return all newly calibrated parameters in a dictionary
+     # get idct() baut lokal ein paython dictionary zusammen 
+     #dabei werden Dictionaries (makroparameter, e, Demographie usw.) hineingemerged 
     def get_dict(self):
         dict = {}
         if self.estimate_tax_functions:
