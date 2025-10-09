@@ -2,7 +2,7 @@
 from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
-from ogdeu import get_micro_data, macro_params
+from ogdeu import get_micro_data, macro_params, income
 from ogcore import txfunc, demographics
 from ogcore.utils import safe_read_pickle, mkdirs
 import json
@@ -54,8 +54,6 @@ class Calibration:
             country_id="276",
             initial_data_year=p.start_year - 1,
             final_data_year=p.start_year,
-            GraphDiag=False,
-            download_path=demographic_data_path,
         )
 
         # demographics for 80 period lives (needed for getting e below)
