@@ -64,6 +64,9 @@ def main():
     # nur eine Teilmenge aus d weren in updated_params gepackt und per p.udate_specifications(updated_params) überschrieben 
     #andere Parameter wie die Makroparameter gamma, g_y_annaule usw. werden gehören zu den default werten aus der Json file (auch in p geladen)
     #udpated_params Dictionary wird aus ausgewählten schlüsseln von d gebaut 
+
+    # omega, g_n_ss, omega_SS, rho, g_n, imm_rates und omega_s_preTP werden endogen im demogrphics.py ermittelt (sehr lang für json)
+    # e, etr_params, mtrx_params, mtry_params, mean_income_data und fact_tax_paroll wird auch endogen ermittelt (sehr lang für json)
     d = c.get_dict()
     updated_params = {
         "omega": d["omega"],
@@ -73,6 +76,7 @@ def main():
         "g_n": d["g_n"],
         "imm_rates": d["imm_rates"],
         "omega_S_preTP": d["omega_S_preTP"],
+
         "e": d["e"],
         "etr_params": d["etr_params"],
         "mtrx_params": d["mtrx_params"],
