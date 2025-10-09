@@ -408,6 +408,7 @@ def get_e_US(age_wgts, abil_wgts):
     #abil_wgts = np.array([0.25, 0.25, 0.2, 0.1, 0.1, 0.09, 0.01])
 
     #We want to create the population weights for each year, to get `age_wgts`
+    '''
     pop_target ='/home/jovyan/work/un_ge_population.csv'
 
     # Convert .csv file to Pandas DataFrame
@@ -443,6 +444,8 @@ def get_e_US(age_wgts, abil_wgts):
     print("age_wgts ist:",age_wgts)
     #age_wgts
 
+    '''
+    
     # 4) lifetime earnings based on re-estimated coefficients
     e_orig_alt = np.zeros((80, 7))
     e_orig_alt[:60, :] = abil_paths_alt
