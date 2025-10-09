@@ -69,6 +69,7 @@ def main():
     # e, etr_params, mtrx_params, mtry_params, mean_income_data und fact_tax_paroll wird auch endogen ermittelt (sehr lang für json)
     d = c.get_dict()
     updated_params = {
+        #demogrphie und e
         "omega": d["omega"],
         "g_n_ss": d["g_n_ss"],
         "omega_SS": d["omega_SS"],
@@ -78,6 +79,7 @@ def main():
         "omega_S_preTP": d["omega_S_preTP"],
 
         "e": d["e"],
+        # Hasuhaltsparamter
         "etr_params": d["etr_params"],
         "mtrx_params": d["mtrx_params"],
         "mtry_params": d["mtry_params"],
@@ -86,10 +88,12 @@ def main():
     }
     # Ditionary wird in p gemerged 
     p.update_specifications(updated_params)
+
+    print (">>>>> Running baseline")
     # Run model
     start_time = time.time()
     runner(p, time_path=True, client=client)
-    print("run time = ", time.time() - start_time)
+    print("baseline run time = ", time.time() - start_time)
 
     """
     ---------------------------------------------------------------------------
@@ -102,7 +106,8 @@ def main():
     p2.baseline = False
     p2.output_base = reform_dir
 
-    # Create a PIT reform
+    '''
+    #Create a PIT reform
     pit_reform = {
         2020: {
             "_std_deduction": [50000],
@@ -126,11 +131,16 @@ def main():
         "frac_tax_payroll": d["frac_tax_payroll"],
     }
     p2.update_specifications(updated_params_ref)
+    
+    '''
+    new_cit = [[0.35]]
+    p2.update_specifications({"cit_rate" : new_cit})
 
     # Run model
+    print (">>>> running reform (cit only)")
     start_time = time.time()
     runner(p2, time_path=True, client=client)
-    print("run time = ", time.time() - start_time)
+    print("reform run time = ", time.time() - start_time)
     client.close()
 
     """
