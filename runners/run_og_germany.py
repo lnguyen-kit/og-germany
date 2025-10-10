@@ -56,7 +56,13 @@ def main():
     #BW ist „number of years in the budget window (the period over which tax policy is assumed to vary)“.
     # Wenn du die Steuerpolitik nur für ein Jahr schätzt/fixierst, genügt BW=1
     p.BW = 1 
-    p.tax_func_type = "GS"
+
+    '''
+    Änderungen:
+    in json file "r_gov_scale": [0.944888], "r_gov_shift": [0.014632], wieder eingefügt
+
+    auskommentiert: #p.tax_func_type = "GS"
+    '''
     c = Calibration(p, estimate_tax_functions=True, client=client)
     client = Client()
 
@@ -77,6 +83,10 @@ def main():
         "g_n": d["g_n"],
         "imm_rates": d["imm_rates"],
         "omega_S_preTP": d["omega_S_preTP"],
+
+        "initial_guess_r_SS": 0.05,
+        "initial_guess_TR_SS": 0.02,
+        "nu":0.25,
 
         "e": d["e"],
         # Hasuhaltsparamter

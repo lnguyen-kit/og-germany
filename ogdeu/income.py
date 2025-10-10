@@ -456,8 +456,8 @@ def get_e_US(age_wgts, abil_wgts):
     # abil_deprec sind werte die steuern, wie stark die tail extrapolation für Alter 81 bis 100 fällt
     # Für Deutschland ist ein Rückgang um etwa die Hälfte in 20 Jahren gut begründbar und konsistent 
     # mit NTA/AGENTA-Profilen (Arbeits­einkommen konzentriert sich auf 20–60 und fällt im hohen Alter stark)
-
-    abil_deprec = np.array([0.47, 0.5, 0.5, 0.5, 0.5, 0.7, 0.5])
+    '''
+     abil_deprec = np.array([0.47, 0.5, 0.5, 0.5, 0.5, 0.7, 0.5])
     #     Initial guesses for the arctan. They're pretty sensitive.
     # Startwerte für a, b und c der actan Kurve mit der man den Teil von Es für Alter 81 bis 100 glättet
     # solver ermittelt die endgültigen Paramter die alle drei Randbenigungen erfüllen 
@@ -481,13 +481,26 @@ def get_e_US(age_wgts, abil_wgts):
             abil_deprec[j],
             init_guesses[j],
         )
-
+    
+    '''
+   
 
     # 5) Skalieren  lifetime earnings path matrix  auf Mittelwert 1 (genau die übergebenen Gewichte!)
+    '''
     e_alt = (
         e_orig_alt
         / (e_orig_alt * age_wgts[21:].reshape(80, 1) * abil_wgts.reshape(1, 7)).sum()
     )
+
+    '''
+    e_alt = (
+        e_orig_alt
+        / (e_orig_alt * age_wgts.reshape(80, 1) * abil_wgts.reshape(1, 7)).sum()
+    )
+
+    print ("ealt matrix lautet", e_alt)
+
+   
 
     return e_alt 
 
@@ -514,22 +527,34 @@ def match_gini(e_alt_base: np.ndarray, lambdas: np.ndarray, age_wgts : np.ndarra
     usa_params.E        = E.copy()
 
     '''
-    
+    '''
     # --- NEU: Power-Transformation statt e*exp(a*e) ---
     # (1) Hilfsfunktion: Gini als Funktion von p
-    def gini_of_p(p):
-        # Falls irgendwo 0-Werte vorkommen:
-        e_base = np.maximum(e_alt_base, 1e-12)
+    def gini_of_p(p, e_base):
+        # p nur auf [:60], Gini über ganze Matrix (80x7)
+        e_base [:60] = np.maximum(e_base [:60], 1e-12)
         em = e_base ** p
         return utils.Inequality(em, age_wgts, lambdas, 80, 7).gini()
+    '''
     
+    def gini_of_p(p, e_base):
+        em = e_base.copy()
+        em[:60] = np.maximum(em[:60], 1e-12)**p
+        return utils.Inequality(em, age_wgts, lambdas, 80, 7).gini()
+
+
+    
+
     tgt = float(gini_to_match)
     #falls Gini Bruch oder Prozent ist 
+    '''
     if tgt <= 1.0:
         tgt *= 100.0
+    '''
+    
 
 
-    g0  = gini_of_p(1.0)   # p=1 -> baseline
+    g0  = gini_of_p(1.0, e_alt_base)   # p=1 -> baseline
 
     # (2) Bracket für p je nach Richtung
     if tgt < g0:
@@ -540,29 +565,84 @@ def match_gini(e_alt_base: np.ndarray, lambdas: np.ndarray, age_wgts : np.ndarra
         lo, hi = 1.0, 3.0
 
     # Sicherheit: Enden ggf. ausweiten, bis Vorzeichenwechsel
-    f_lo = gini_of_p(lo) - tgt
-    f_hi = gini_of_p(hi) - tgt
+    f_lo = gini_of_p(lo,e_alt_base) - tgt
+    f_hi = gini_of_p(hi,e_alt_base) - tgt
     k = 0
     while (f_lo * f_hi > 0) and k < 25:
         if tgt < g0:
             lo = max(lo/2, 1e-4)   # weiter Richtung 0
         else:
             hi *= 1.5              # weiter nach oben
-        f_lo = gini_of_p(lo) - tgt
-        f_hi = gini_of_p(hi) - tgt
+        f_lo = gini_of_p(lo,e_alt_base) - tgt
+        f_hi = gini_of_p(hi, e_alt_base) - tgt
         k += 1
     if f_lo * f_hi > 0:
         raise ValueError(f"Kein Vorzeichenwechsel für p gefunden (g0={g0:.6f}, tgt={tgt:.6f}).")
 
     # (3) p* finden
-    p_star = opt.root_scalar(lambda p: gini_of_p(p) - tgt,
+    p_star = opt.root_scalar(lambda p: gini_of_p(p, e_alt_base) - tgt,
                              method="bisect", bracket=[lo, hi], xtol=1e-10).root
+    
+
+    e_new = e_alt_base.copy()
+    e_new [:60] = np.maximum(e_new[:60], 1e-12)**p_star  
+
+    
+    const = [0.85076795, -1.86233513, -3.34685163, -3.66923205, -3.49862477, -0.95923205, -0.66923205]
+    one = [0.03063091, 0.18778507, 0.30437831, 0.33951476, 0.34421944, 0.17283448, 0.22012605]
+    two = [0.00062368, -0.00189357, -0.00425927, -0.00491826, -0.00506312, -0.00091018, -0.00172369]
+    three = [-1.71125612e-05, -3.90256117e-06, 1.16974388e-05, 1.56874388e-05, 1.70974388e-05, -1.33925612e-05, -1.03825612e-05]
+
+    one_p   = p_star * np.asarray(one)
+    two_p   = p_star * np.asarray(two)
+    three_p = p_star * np.asarray(three)
+    
+    abil_deprec = np.array([0.47, 0.5, 0.5, 0.5, 0.5, 0.7, 0.5])
+    #     Initial guesses for the arctan. They're pretty sensitive.
+    # Startwerte für a, b und c der actan Kurve mit der man den Teil von Es für Alter 81 bis 100 glättet
+    # solver ermittelt die endgültigen Paramter die alle drei Randbenigungen erfüllen 
+    init_guesses = np.array(
+        [
+            [58, 0.0756438545595, -5.6940142786],
+            [27, 0.069, -5],
+            [35, 0.06, -5],
+            [37, 0.339936555352, -33.5987329144],
+            [70.5229181668, 0.0701993896947, -6.37746859905],
+            [35, 0.06, -5],
+            [35, 0.06, -5],
+        ]
+    )
+    for j in range(7):
+        e_new[60:, j] = arctan_fit(
+            e_new[59, j],
+            one_p[j],
+            two_p[j],
+            three_p[j],
+            abil_deprec[j],
+            init_guesses[j],
+        )
+    
+  
+
+
+    emat_final_scaled = e_new / (
+        e_new * age_wgts.reshape(80, 1) * lambdas.reshape(1, 7)
+    ).sum()
+
+
+    '''
 
     # (4) E neu und skalieren (Mittelwert 1 mit DE-Gewichten)
     e_new = np.maximum(e_alt_base, 1e-12) ** p_star   
     emat_final_scaled = e_new / (
         e_new * age_wgts.reshape(80, 1) * lambdas.reshape(1, 7)
     ).sum()
+    
+    
+    '''
+
+    print ("das ist die finale e matrix:", emat_final_scaled)
+
 
     return emat_final_scaled 
 
