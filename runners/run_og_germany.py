@@ -55,7 +55,9 @@ def main():
     # Update parameters from calibrate.py Calibration class
     #BW ist „number of years in the budget window (the period over which tax policy is assumed to vary)“.
     # Wenn du die Steuerpolitik nur für ein Jahr schätzt/fixierst, genügt BW=1
-    p.BW = 1 
+    
+    #Änderng des Politkfester 2025 bis 2032 , vorher : p.BW = 1 
+    p.BW = 1
 
     '''
     Änderungen:
@@ -63,7 +65,7 @@ def main():
 
     auskommentiert: #p.tax_func_type = "GS"
     '''
-    c = Calibration(p, estimate_tax_functions=True, client=client)
+    c = Calibration(p, estimate_tax_functions=True, client=client )
     client = Client()
 
     # Einträge omega, gn_ss, usw. kommen aus dme Dictionary d der Calibration klasse 
