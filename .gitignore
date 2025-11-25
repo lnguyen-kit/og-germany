@@ -7,3 +7,5 @@ OG-Germany_example_plots/
 *.pkl
 *.log
 ogdeu_example_output.csv
+
+un_api_token.txt
