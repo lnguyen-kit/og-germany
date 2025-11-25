@@ -25,8 +25,11 @@ def main():
 
     # Directories to save data
     CUR_DIR = os.path.dirname(os.path.realpath(__file__))
-    base_dir = os.path.join(CUR_DIR, "OG-Germany-Example", "OUTPUT_BASELINE")
-    reform_dir = os.path.join(CUR_DIR, "OG-Germany-Example", "OUTPUT_REFORM")
+    base_dir = os.path.join(CUR_DIR, "OG-Germany-Example1", "OUTPUT_BASELINE")
+    reform_dir = os.path.join(CUR_DIR, "OG-Germany-Example1", "OUTPUT_REFORM")
+
+    #base_dir = os.path.join(CUR_DIR, "OG-Germany-TEST2", "OUTPUT_BASELINE2")
+    #reform_dir = os.path.join(CUR_DIR, "OG-Germany-TEST2", "OUTPUT_REFORM2")
 
     """
     ---------------------------------------------------------------------------
@@ -65,8 +68,13 @@ def main():
 
     auskommentiert: #p.tax_func_type = "GS"
     '''
+    client = Client(processes=False)
+    print("Dask Client läuft im Threaded-Modus (processes=False)")
     c = Calibration(p, estimate_tax_functions=True, client=client )
-    client = Client()
+    #client = Client()
+
+    #client = Client(n_workers=4, threads_per_worker=1)
+    
 
     # Einträge omega, gn_ss, usw. kommen aus dme Dictionary d der Calibration klasse 
     # nur eine Teilmenge aus d weren in updated_params gepackt und per p.udate_specifications(updated_params) überschrieben 
@@ -87,8 +95,11 @@ def main():
         "omega_S_preTP": d["omega_S_preTP"],
 
         "initial_guess_r_SS": 0.05,
+        #"initial_guess_r_SS": 0.0648,
         "initial_guess_TR_SS": 0.02,
-        "nu":0.25,
+        #"initial_guess_TR_SS": 0.057,
+        #"nu":0.25,
+        "nu":0.4,
 
         "e": d["e"],
         # Hasuhaltsparamter
@@ -145,7 +156,11 @@ def main():
     p2.update_specifications(updated_params_ref)
     
     '''
-    new_cit = [[0.35]]
+
+
+
+
+    new_cit = [[0.25]]
     p2.update_specifications({"cit_rate" : new_cit})
 
     # Run model
@@ -159,7 +174,7 @@ def main():
     ---------------------------------------------------------------------------
     Save some results of simulations
     ---------------------------------------------------------------------------
-    """
+    
     base_tpi = safe_read_pickle(os.path.join(base_dir, "TPI", "TPI_vars.pkl"))
     base_params = safe_read_pickle(os.path.join(base_dir, "model_params.pkl"))
     reform_tpi = safe_read_pickle(
@@ -168,6 +183,16 @@ def main():
     reform_params = safe_read_pickle(
         os.path.join(reform_dir, "model_params.pkl")
     )
+    """
+    base_tpi = safe_read_pickle(os.path.join(base_dir, "TPI", "TPI_vars2.pkl"))
+    base_params = safe_read_pickle(os.path.join(base_dir, "model_params2.pkl"))
+    reform_tpi = safe_read_pickle(
+        os.path.join(reform_dir, "TPI", "TPI_vars.pkl2")
+    )
+    reform_params = safe_read_pickle(
+        os.path.join(reform_dir, "model_params.pkl")
+    )
+
     ans = ot.macro_table(
         base_tpi,
         base_params,
@@ -186,9 +211,11 @@ def main():
 
     print("Percentage changes in aggregates:", ans)
     # save percentage change output to csv file
-    ans.to_csv("ogdeu_example_output.csv")
+    #ans.to_csv("ogdeu_example_output.csv")
+    ans.to_csv("ogdeu_example_output2.csv")
 
 
 if __name__ == "__main__":
     # execute only if run as a script
     main()
+

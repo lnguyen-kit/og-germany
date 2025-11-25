@@ -5,3 +5,4 @@ scipy
 pyyaml
 dask
 taxcalc
+statsmodels

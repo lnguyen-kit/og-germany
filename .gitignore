@@ -1,2 +1,9 @@
-un_api_token.txt
-data/demography/
+.venv/
+__pycache__/
+*.pyc
+OUTPUT_BASELINE/
+OUTPUT_REFORM/
+OG-Germany_example_plots/
+*.pkl
+*.log
+ogdeu_example_output.csv

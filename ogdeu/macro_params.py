@@ -74,14 +74,18 @@ def get_macro_params():
         "sigma" : 1.298701,
         "zeta_D": [0.4],
         "zeta_K":  [0.0],
-        "alpha_G":  [0.066],
+        "alpha_G":  [0.213],
         "alpha_T":  [0.161],
         "tau_c" :  [[0.19]],
         "retirement_age": [67],
-        "cit_rate": [[0.15825]], 
+        "cit_rate": [[0.30]], 
         "delta_annual" :  0.04,
-        "r_gov_scale" :[0.944888],
-        "r_gov_shift" :[0.014632],
+
+        #"r_gov_scale" :[0.944888],
+        "r_gov_scale" :[1.0],
+        #"r_gov_shift" :[0.014632],
+        "r_gov_shift" :[0.0],
+
     }
     
 
